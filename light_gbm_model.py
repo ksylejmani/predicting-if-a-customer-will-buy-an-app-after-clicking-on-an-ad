@@ -2,8 +2,12 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 import lightgbm as lgb
 from sklearn.metrics import roc_auc_score
+import category_encoders as ce
+import itertools
 
-# *** Importing data
+ce.CountEncoder
+
+# Importing data
 file_path = 'input/train_sample.csv'
 clicks = pd.read_csv(file_path, parse_dates=['click_time'])
 
@@ -19,6 +23,14 @@ label_encoder = LabelEncoder()
 for cat in cat_features:
     clicks[cat + '_labels'] = label_encoder.fit_transform(clicks[cat])
 
+# Adding interaction features
+interactions = pd.DataFrame(index=clicks.index)
+for col1, col2 in itertools.combinations(cat_features, 2):
+    new_column_name = '-'.join([col1, col2])
+    new_values = clicks[col1].map(str) + clicks[col2].map(str)
+    interactions[new_column_name] = label_encoder.fit_transform(new_values)
+clicks.join(interactions)
+
 # Split the data set
 valid_fraction = 0.1
 clicks_srt = clicks.sort_values('click_time')
@@ -29,6 +41,7 @@ test = clicks_srt[len(clicks_srt) - valid_rows:len(clicks_srt)]
 feature_cols = ['day', 'hour', 'minute', 'second',
                 'ip_labels', 'app_labels', 'device_labels',
                 'os_labels', 'channel_labels']
+
 X_train = train[feature_cols]
 y_train = train['is_attributed']
 X_valid = valid[feature_cols]
